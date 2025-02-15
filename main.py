@@ -1,23 +1,13 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from api.router import api_router
-
-from core.config import settings
+from api.routes import books  # Import the books router
 
 app = FastAPI()
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Register the books router
+app.include_router(books.router)
 
-app.include_router(api_router, prefix=settings.API_PREFIX)
+# Root endpoint
+@app.get("/")
+def root():
+    return {"message": "Welcome to the FastAPI Book API"}
 
-
-@app.get("/healthcheck")
-async def health_check():
-    """Checks if server is active."""
-    return {"status": "active"}

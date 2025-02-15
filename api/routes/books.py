@@ -1,13 +1,14 @@
-
-from typing import OrderedDict
-
-from fastapi import APIRouter, status
-from fastapi.responses import JSONResponse
-
-from api.db.schemas import Book, Genre, InMemoryDB
+from fastapi import APIRouter, status, HTTPException
+from api.db.schemas import Book, Genre
 
 router = APIRouter()
 
+# Ensure db.books is always a dictionary
+class InMemoryDB:
+    def __init__(self):
+        self.books = {}  # Ensures a valid dictionary
+
+# Initialize the database
 db = InMemoryDB()
 db.books = {
     1: Book(
@@ -19,46 +20,25 @@ db.books = {
     ),
     2: Book(
         id=2,
-        title="The Lord of the Rings",
-        author="J.R.R. Tolkien",
-        publication_year=1954,
-        genre=Genre.FANTASY,
-    ),
-    3: Book(
-        id=3,
-        title="The Return of the King",
-        author="J.R.R. Tolkien",
-        publication_year=1955,
-        genre=Genre.FANTASY,
+        title="1984",
+        author="George Orwell",
+        publication_year=1949,
+        genre=Genre.THRILLER,
     ),
 }
 
+@router.get("/api/v1/books/{book_id}", response_model=Book, status_code=status.HTTP_200_OK)
+def get_book_by_id(book_id: int):
+    """
+    Retrieve a book by its ID.
+    If the book ID does not exist, return a 404 Not Found response.
+    """
+    if not isinstance(db.books, dict):  # Ensure db.books is a dictionary
+        raise HTTPException(status_code=500, detail="Database error: books storage is invalid")
 
-@router.post("/", status_code=status.HTTP_201_CREATED)
-async def create_book(book: Book):
-    db.add_book(book)
-    return JSONResponse(
-        status_code=status.HTTP_201_CREATED, content=book.model_dump()
-    )
-
-
-@router.get(
-    "/", response_model=OrderedDict[int, Book], status_code=status.HTTP_200_OK
-)
-async def get_books() -> OrderedDict[int, Book]:
-    return db.get_books()
-
-
-@router.put("/{book_id}", response_model=Book, status_code=status.HTTP_200_OK)
-async def update_book(book_id: int, book: Book) -> Book:
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content=db.update_book(book_id, book).model_dump(),
-    )
-
-
-@router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_book(book_id: int) -> None:
-    db.delete_book(book_id)
-    return JSONResponse(status_code=status.HTTP_204_NO_CONTENT, content=None)
+    book = db.books.get(book_id)  # Get the book safely
+    if book is None:
+        raise HTTPException(status_code=404, detail="Book not found")
+    
+    return book
 
