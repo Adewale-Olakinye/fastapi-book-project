@@ -1,14 +1,11 @@
-from fastapi import APIRouter, status, HTTPException
-from api.db.schemas import Book, Genre
+from typing import Dict
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
+
+from api.db.schemas import Book, Genre, InMemoryDB
 
 router = APIRouter()
 
-# Ensure db.books is always a dictionary
-class InMemoryDB:
-    def __init__(self):
-        self.books = {}  # Ensures a valid dictionary
-
-# Initialize the database
 db = InMemoryDB()
 db.books = {
     1: Book(
@@ -16,29 +13,26 @@ db.books = {
         title="The Hobbit",
         author="J.R.R. Tolkien",
         publication_year=1937,
-        genre=Genre.SCI_FI,
+        genre=Genre.FANTASY,
     ),
     2: Book(
         id=2,
-        title="1984",
-        author="George Orwell",
-        publication_year=1949,
-        genre=Genre.THRILLER,
+        title="The Lord of the Rings",
+        author="J.R.R. Tolkien",
+        publication_year=1954,
+        genre=Genre.FANTASY,
     ),
 }
 
-@router.get("/api/v1/books/{book_id}", response_model=Book, status_code=status.HTTP_200_OK)
-def get_book_by_id(book_id: int):
-    """
-    Retrieve a book by its ID.
-    If the book ID does not exist, return a 404 Not Found response.
-    """
-    if not isinstance(db.books, dict):  # Ensure db.books is a dictionary
-        raise HTTPException(status_code=500, detail="Database error: books storage is invalid")
+@router.get("/api/v1/books", response_model=Dict[int, Book])
+def get_books():
+    """Retrieve all books."""
+    return db.books
 
-    book = db.books.get(book_id)  # Get the book safely
-    if book is None:
+@router.get("/api/v1/books/{book_id}", response_model=Book)
+def get_book(book_id: int):
+    """Retrieve a book by its ID."""
+    if book_id not in db.books:
         raise HTTPException(status_code=404, detail="Book not found")
-    
-    return book
+    return db.books[book_id]
 
